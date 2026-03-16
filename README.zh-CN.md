@@ -213,4 +213,4 @@ git push --follow-tags
 
 ## License
 
-[BSD-3-Clause](./LICENSE)
+[Apache-2.0](./LICENSE)

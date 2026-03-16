@@ -232,4 +232,4 @@ The CI will automatically build, create a GitHub release, and publish to npm.
 
 ## License
 
-[BSD-3-Clause](./LICENSE)
+[Apache-2.0](./LICENSE)
