@@ -1,6 +1,7 @@
 import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
+import { execSync } from 'node:child_process';
 import { createInterface } from 'node:readline/promises';
 import { stdin as input, stdout as output } from 'node:process';
 import type { IPage } from './types.js';
@@ -282,47 +283,29 @@ export function discoverExtensionToken(): string | null {
 
 function extractTokenViaStrings(dir: string, tokenRe: RegExp): string | null {
   try {
-    // Step 1: Find files containing the extension ID
-    const { execSync } = require('node:child_process') as typeof import('node:child_process');
-    const grepResult = execSync(
-      `grep -rl '${PLAYWRIGHT_EXTENSION_ID}' "${dir}" 2>/dev/null | head -10`,
-      { encoding: 'utf-8', timeout: 5000 },
-    ).trim();
-    if (!grepResult) return null;
+    // Single shell pipeline: for each LevelDB file, extract strings, find lines
+    // after the extension ID, and filter for base64url token pattern.
+    //
+    // LevelDB `strings` output for the extension's auth-token entry:
+    //   auth-token                                    ← key name
+    //   4,mmlmfjhmonkocbjadbfplnigmagldckm.7          ← LevelDB internal key
+    //   hqI86ncsD1QpcVcj-k9CyzTF-ieCQd_4KreZ_wy1WHA  ← token value
+    //
+    // We get the line immediately after any EXTENSION_ID mention and check
+    // if it looks like a base64url token (40-50 chars, [A-Za-z0-9_-]).
+    const shellDir = dir.replace(/'/g, "'\\''");
+    const cmd = `for f in '${shellDir}'/*.ldb '${shellDir}'/*.log; do ` +
+      `[ -f "$f" ] && strings "$f" 2>/dev/null | ` +
+      `grep -A1 '${PLAYWRIGHT_EXTENSION_ID}' | ` +
+      `grep -v '${PLAYWRIGHT_EXTENSION_ID}' | ` +
+      `grep -E '^[A-Za-z0-9_-]{40,50}$' | head -1; ` +
+      `done 2>/dev/null`;
+    const result = execSync(cmd, { encoding: 'utf-8', timeout: 10000 }).trim();
 
-    const candidateFiles = grepResult.split('\n').filter(Boolean);
-
-    for (const file of candidateFiles) {
-      // Step 2: Extract strings containing "auth-token" or the extension ID pattern
-      try {
-        const stringsOutput = execSync(
-          `strings "${file}" 2>/dev/null`,
-          { encoding: 'utf-8', timeout: 5000, maxBuffer: 4 * 1024 * 1024 },
-        );
-
-        // Look for the token pattern near the extension ID + auth-token key
-        // LevelDB stores: "EXTENSION_ID.N\0...\0auth-token\0R\n...TOKEN_VALUE"
-        const lines = stringsOutput.split('\n');
-        let foundExtKey = false;
-        for (const line of lines) {
-          if (line.includes(PLAYWRIGHT_EXTENSION_ID)) foundExtKey = true;
-          if (foundExtKey && line.includes('auth-token')) {
-            // The token should appear in a nearby line
-            foundExtKey = false; // reset
-            continue;
-          }
-          if (foundExtKey || line.includes('auth-token')) {
-            const m = line.match(tokenRe);
-            if (m && validateBase64urlToken(m[1])) return m[1];
-          }
-        }
-
-        // Also try: look for token value after "EXTENSION_ID.N" pattern
-        const extKeyMatch = stringsOutput.match(
-          new RegExp(`${PLAYWRIGHT_EXTENSION_ID}\\.\\d[\\s\\S]{0,100}?${tokenRe.source}`),
-        );
-        if (extKeyMatch?.[1] && validateBase64urlToken(extKeyMatch[1])) return extKeyMatch[1];
-      } catch { continue; }
+    // Take the first non-empty line
+    for (const line of result.split('\n')) {
+      const token = line.trim();
+      if (token && validateBase64urlToken(token)) return token;
     }
   } catch {}
   return null;
