@@ -16,7 +16,7 @@ cli({
   func: async (_page, args) => {
     const lang = args.lang || 'en';
     const title = encodeURIComponent(args.title.replace(/ /g, '_'));
-    const data = await wikiFetch(lang, `/api/rest_v1/page/summary/${title}`);
+    const data = await wikiFetch(lang, `/api/rest_v1/page/summary/${title}`) as { title?: string; description?: string; extract?: string; content_urls?: { desktop?: { page?: string } } };
     if (!data?.title) throw new CliError('NOT_FOUND', `Article "${args.title}" not found`, 'Try searching first: opencli wikipedia search <keyword>');
     return [{
       title: data.title,

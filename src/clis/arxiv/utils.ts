@@ -54,7 +54,7 @@ export function parseEntries(xml: string): ArxivEntry[] {
       id: arxivId,
       title: extract(e, 'title').replace(/\s+/g, ' '),
       authors: extractAll(e, 'name').slice(0, 3).join(', '),
-      abstract: extract(e, 'summary').replace(/\s+/g, ' ').slice(0, 200) + '...',
+      abstract: (() => { const s = extract(e, 'summary').replace(/\s+/g, ' '); return s.length > 200 ? s.slice(0, 200) + '...' : s; })(),
       published: extract(e, 'published').slice(0, 10),
       url: `https://arxiv.org/abs/${arxivId}`,
     });

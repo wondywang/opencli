@@ -2,6 +2,8 @@ import { cli, Strategy } from '../../registry.js';
 import { CliError } from '../../errors.js';
 import { wikiFetch } from './utils.js';
 
+interface WikiSearchResult { title: string; snippet: string; }
+
 cli({
   site: 'wikipedia',
   name: 'search',
@@ -18,10 +20,10 @@ cli({
     const limit = Math.max(1, Math.min(Number(args.limit), 50));
     const lang = args.lang || 'en';
     const q = encodeURIComponent(args.keyword);
-    const data = await wikiFetch(lang, `/w/api.php?action=query&list=search&srsearch=${q}&srlimit=${limit}&format=json&utf8=1`);
+    const data = await wikiFetch(lang, `/w/api.php?action=query&list=search&srsearch=${q}&srlimit=${limit}&format=json&utf8=1`) as { query?: { search?: WikiSearchResult[] } };
     const results = data?.query?.search;
     if (!results?.length) throw new CliError('NOT_FOUND', 'No articles found', 'Try a different keyword');
-    return results.map((r: any) => ({
+    return results.map((r) => ({
       title: r.title,
       snippet: r.snippet.replace(/<[^>]+>/g, '').slice(0, 120),
       url: `https://${lang}.wikipedia.org/wiki/${encodeURIComponent(r.title.replace(/ /g, '_'))}`,

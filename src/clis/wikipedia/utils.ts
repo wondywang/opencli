@@ -8,7 +8,7 @@
 
 import { CliError } from '../../errors.js';
 
-export async function wikiFetch(lang: string, path: string): Promise<any> {
+export async function wikiFetch(lang: string, path: string): Promise<unknown> {
   const url = `https://${lang}.wikipedia.org${path}`;
   const resp = await fetch(url, {
     headers: { 'User-Agent': 'opencli/1.0 (https://github.com/jackwener/opencli)' },
