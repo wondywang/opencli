@@ -88,6 +88,33 @@ function resolveStoredPluginSource(lockEntry: LockEntry | undefined, pluginDir: 
   return lockEntry?.source ?? getPluginSource(pluginDir);
 }
 
+// ── Filesystem helpers ──────────────────────────────────────────────────────
+
+/**
+ * Move a directory, with EXDEV fallback.
+ * fs.renameSync fails when source and destination are on different
+ * filesystems (e.g. /tmp → ~/.opencli). In that case we copy then remove.
+ */
+type MoveDirFsOps = Pick<typeof fs, 'renameSync' | 'cpSync' | 'rmSync'>;
+
+function moveDir(src: string, dest: string, fsOps: MoveDirFsOps = fs): void {
+  try {
+    fsOps.renameSync(src, dest);
+  } catch (err: unknown) {
+    if ((err as NodeJS.ErrnoException).code === 'EXDEV') {
+      try {
+        fsOps.cpSync(src, dest, { recursive: true });
+      } catch (copyErr) {
+        try { fsOps.rmSync(dest, { recursive: true, force: true }); } catch {}
+        throw copyErr;
+      }
+      fsOps.rmSync(src, { recursive: true, force: true });
+    } else {
+      throw err;
+    }
+  }
+}
+
 // ── Validation helpers ──────────────────────────────────────────────────────
 
 export interface ValidationResult {
@@ -292,7 +319,7 @@ function installSinglePlugin(
   }
 
   fs.mkdirSync(PLUGINS_DIR, { recursive: true });
-  fs.renameSync(cloneDir, targetDir);
+  moveDir(cloneDir, targetDir);
 
   postInstallLifecycle(targetDir);
 
@@ -404,7 +431,7 @@ function installMonorepo(
   // Move clone to permanent monorepos location (if not already there)
   if (!fs.existsSync(repoDir)) {
     fs.mkdirSync(monoreposDir, { recursive: true });
-    fs.renameSync(cloneDir, repoDir);
+    moveDir(cloneDir, repoDir);
   }
 
   let pluginsToInstall = getEnabledPlugins(manifest);
@@ -957,6 +984,7 @@ export {
   getMonoreposDir as _getMonoreposDir,
   installLocalPlugin as _installLocalPlugin,
   isLocalPluginSource as _isLocalPluginSource,
+  moveDir as _moveDir,
   resolveStoredPluginSource as _resolveStoredPluginSource,
   toLocalPluginSource as _toLocalPluginSource,
 };
