@@ -196,6 +196,22 @@ function main() {
     }
   }
 
+  // ── Spotify credentials template ────────────────────────────────────
+  const opencliDir = join(home, '.opencli');
+  const spotifyEnvFile = join(opencliDir, 'spotify.env');
+  ensureDir(opencliDir);
+  if (!existsSync(spotifyEnvFile)) {
+    writeFileSync(spotifyEnvFile,
+      `# Spotify credentials — get them at https://developer.spotify.com/dashboard\n` +
+      `# Add http://127.0.0.1:8888/callback as a Redirect URI in your Spotify app\n` +
+      `SPOTIFY_CLIENT_ID=\n` +
+      `SPOTIFY_CLIENT_SECRET=\n`,
+      'utf8'
+    );
+    console.log(`✓ Spotify credentials template created at ${spotifyEnvFile}`);
+    console.log(`  Fill in your Client ID and Secret, then run: opencli spotify auth`);
+  }
+
   // ── Browser Bridge setup hint ───────────────────────────────────────
   console.log('');
   console.log('  \x1b[1mNext step — Browser Bridge setup\x1b[0m');

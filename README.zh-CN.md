@@ -173,6 +173,7 @@ npm install -g @jackwener/opencli@latest
 | **douban** | `search` `top250` `subject` `photos` `download` `marks` `reviews` `movie-hot` `book-hot` | 浏览器 |
 | **facebook** | `feed` `profile` `search` `friends` `groups` `events` `notifications` `memories` `add-friend` `join-group` | 浏览器 |
 | **google** | `news` `search` `suggest` `trends` | 公开 |
+| **spotify** | `auth` `status` `play` `pause` `next` `prev` `volume` `search` `queue` `shuffle` `repeat` | OAuth API |
 | **36kr** | `news` `hot` `search` `article` | 公开 / 浏览器 |
 | **imdb** | `search` `title` `top` `trending` `person` `reviews` | 公开 |
 | **producthunt** | `posts` `today` `hot` `browse` | 公开 / 浏览器 |

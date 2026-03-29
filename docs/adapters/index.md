@@ -62,6 +62,7 @@ Run `opencli list` for the live registry.
 | **[barchart](/adapters/browser/barchart)** | `quote` `options` `greeks` `flow` | 🌐 Public |
 | **[hf](/adapters/browser/hf)** | `top` | 🌐 Public |
 | **[sinafinance](/adapters/browser/sinafinance)** | `news` | 🌐 Public |
+| **[spotify](/adapters/browser/spotify)** | `auth` `status` `play` `pause` `next` `prev` `volume` `search` `queue` `shuffle` `repeat` | 🔑 OAuth API |
 | **[stackoverflow](/adapters/browser/stackoverflow)** | `hot` `search` `bounties` `unanswered` | 🌐 Public |
 | **[wikipedia](/adapters/browser/wikipedia)** | `search` `summary` `random` `trending` | 🌐 Public |
 | **[lobsters](/adapters/browser/lobsters)** | `hot` `newest` `active` `tag` | 🌐 Public |

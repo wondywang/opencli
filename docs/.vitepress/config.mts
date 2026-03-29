@@ -105,6 +105,7 @@ export default defineConfig({
                 { text: 'Barchart', link: '/adapters/browser/barchart' },
                 { text: 'Hugging Face', link: '/adapters/browser/hf' },
                 { text: 'Sina Finance', link: '/adapters/browser/sinafinance' },
+                { text: 'Spotify', link: '/adapters/browser/spotify' },
                 { text: 'Stack Overflow', link: '/adapters/browser/stackoverflow' },
                 { text: 'Wikipedia', link: '/adapters/browser/wikipedia' },
                 { text: 'Lobsters', link: '/adapters/browser/lobsters' },
