@@ -57,25 +57,64 @@ async function writeCompatShimIfNeeded(filePath: string, content: string): Promi
 }
 
 /**
- * Create runtime shim files under ~/.opencli so legacy user TS CLIs can keep
- * importing ../../registry(.js) and ../../errors(.js).
+ * Create runtime shim files under ~/.opencli so user CLIs can keep
+ * importing ../../registry(.js), ../../errors(.js), etc.
+ *
+ * Adapters use relative imports like `../../registry.js` which, from
+ * ~/.opencli/clis/<site>/<cmd>.js, resolve to ~/.opencli/registry.js.
+ * We create shim files that re-export from the installed opencli runtime.
  */
 export async function ensureUserCliCompatShims(baseDir: string = USER_OPENCLI_DIR): Promise<void> {
   await fs.promises.mkdir(baseDir, { recursive: true });
 
-  const registryUrl = pathToFileURL(resolveHostRuntimeModulePath('registry-api')).href;
-  const errorsUrl = pathToFileURL(resolveHostRuntimeModulePath('errors')).href;
+  // Map of shim name → runtime module name (resolved via resolveHostRuntimeModulePath)
+  const rootShims: Array<[string, string]> = [
+    ['registry', 'registry-api'],
+    ['errors', 'errors'],
+    ['types', 'types'],
+    ['utils', 'utils'],
+    ['logger', 'logger'],
+    ['launcher', 'launcher'],
+  ];
 
-  await Promise.all([
-    writeCompatShimIfNeeded(path.join(baseDir, 'registry'), `export * from '${registryUrl}';\n`),
-    writeCompatShimIfNeeded(path.join(baseDir, 'registry.js'), `export * from '${registryUrl}';\n`),
-    writeCompatShimIfNeeded(path.join(baseDir, 'errors'), `export * from '${errorsUrl}';\n`),
-    writeCompatShimIfNeeded(path.join(baseDir, 'errors.js'), `export * from '${errorsUrl}';\n`),
-    writeCompatShimIfNeeded(
-      path.join(baseDir, 'package.json'),
-      `${JSON.stringify({ name: 'opencli-user-runtime', private: true, type: 'module' }, null, 2)}\n`,
-    ),
-  ]);
+  // Subdirectory shims: [subdir, filename, runtime module path relative to src/]
+  const subdirShims: Array<[string, string, string]> = [
+    ['browser', 'cdp', 'browser/cdp'],
+    ['browser', 'page', 'browser/page'],
+    ['browser', 'utils', 'browser/utils'],
+    ['download', 'index', 'download/index'],
+    ['download', 'article-download', 'download/article-download'],
+    ['download', 'media-download', 'download/media-download'],
+    ['download', 'progress', 'download/progress'],
+    ['pipeline', 'index', 'pipeline/index'],
+  ];
+
+  const writes: Promise<void>[] = [];
+
+  // Root-level shims (both with and without .js extension)
+  for (const [shimName, moduleName] of rootShims) {
+    const url = pathToFileURL(resolveHostRuntimeModulePath(moduleName)).href;
+    const content = `export * from '${url}';\n`;
+    writes.push(writeCompatShimIfNeeded(path.join(baseDir, shimName), content));
+    writes.push(writeCompatShimIfNeeded(path.join(baseDir, `${shimName}.js`), content));
+  }
+
+  // Subdirectory shims
+  for (const [subdir, filename, runtimePath] of subdirShims) {
+    const dir = path.join(baseDir, subdir);
+    await fs.promises.mkdir(dir, { recursive: true });
+    const url = pathToFileURL(resolveHostRuntimeModulePath(runtimePath)).href;
+    const content = `export * from '${url}';\n`;
+    writes.push(writeCompatShimIfNeeded(path.join(dir, `${filename}.js`), content));
+  }
+
+  // package.json for ESM resolution
+  writes.push(writeCompatShimIfNeeded(
+    path.join(baseDir, 'package.json'),
+    `${JSON.stringify({ name: 'opencli-user-runtime', private: true, type: 'module' }, null, 2)}\n`,
+  ));
+
+  await Promise.all(writes);
 
   // Create node_modules/@jackwener/opencli symlink so user TS CLIs can import
   // from '@jackwener/opencli/registry' (the package export).
@@ -97,6 +136,44 @@ export async function ensureUserCliCompatShims(baseDir: string = USER_OPENCLI_DI
     }
   } catch {
     // Non-fatal: npm-linked installs or permission issues may prevent this
+  }
+}
+
+const ADAPTER_MANIFEST_PATH = path.join(USER_OPENCLI_DIR, 'adapter-manifest.json');
+
+/**
+ * First-run fallback: if postinstall was skipped (--ignore-scripts) or failed,
+ * trigger adapter fetch on first CLI invocation when ~/.opencli/clis/ is empty.
+ */
+export async function ensureUserAdapters(): Promise<void> {
+  // If adapter manifest already exists, adapters were fetched — nothing to do
+  try {
+    await fs.promises.access(ADAPTER_MANIFEST_PATH);
+    return;
+  } catch {
+    // No manifest — first run or postinstall was skipped
+  }
+
+  // Check if clis dir has any content (could be manually populated)
+  try {
+    const entries = await fs.promises.readdir(USER_CLIS_DIR);
+    if (entries.length > 0) return;
+  } catch {
+    // Dir doesn't exist — needs fetch
+  }
+
+  log.info('First run detected — fetching adapters...');
+  try {
+    const { execFileSync } = await import('node:child_process');
+    const scriptPath = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..', 'scripts', 'fetch-adapters.js');
+    execFileSync(process.execPath, [scriptPath], {
+      stdio: 'inherit',
+      env: { ...process.env, _OPENCLI_FIRST_RUN: '1' },
+      timeout: 120_000,
+    });
+  } catch (err) {
+    log.warn(`Could not fetch adapters on first run: ${getErrorMessage(err)}`);
+    log.warn('Built-in adapters from the package will be used.');
   }
 }
 
