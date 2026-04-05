@@ -175,6 +175,8 @@ class CDPPage extends BasePage {
   }> = [];
   private _pendingRequests = new Map<string, number>(); // requestId → index in _networkEntries
   private _pendingBodyFetches: Set<Promise<void>> = new Set(); // track in-flight getResponseBody calls
+  private _consoleMessages: Array<{ type: string; text: string; timestamp: number }> = [];
+  private _consoleCapturing = false;
 
   constructor(private bridge: CDPBridge) {
     super();
@@ -296,6 +298,30 @@ class CDPPage extends BasePage {
     const entries = [...this._networkEntries];
     this._networkEntries = [];
     return entries;
+  }
+
+  async consoleMessages(level: string = 'all'): Promise<Array<{ type: string; text: string; timestamp: number }>> {
+    if (!this._consoleCapturing) {
+      await this.bridge.send('Runtime.enable');
+      this.bridge.on('Runtime.consoleAPICalled', (params: unknown) => {
+        const p = params as { type: string; args: Array<{ value?: unknown; description?: string }>; timestamp: number };
+        const text = (p.args || []).map(a => a.value !== undefined ? String(a.value) : (a.description || '')).join(' ');
+        this._consoleMessages.push({ type: p.type, text, timestamp: p.timestamp });
+        if (this._consoleMessages.length > 500) this._consoleMessages.shift();
+      });
+      // Capture uncaught exceptions as error-level messages
+      this.bridge.on('Runtime.exceptionThrown', (params: unknown) => {
+        const p = params as { timestamp: number; exceptionDetails?: { exception?: { description?: string }; text?: string } };
+        const desc = p.exceptionDetails?.exception?.description || p.exceptionDetails?.text || 'Unknown exception';
+        this._consoleMessages.push({ type: 'error', text: desc, timestamp: p.timestamp });
+        if (this._consoleMessages.length > 500) this._consoleMessages.shift();
+      });
+      this._consoleCapturing = true;
+    }
+    if (level === 'all') return [...this._consoleMessages];
+    // 'error' level includes both console.error() and uncaught exceptions
+    if (level === 'error') return this._consoleMessages.filter(m => m.type === 'error' || m.type === 'warning');
+    return this._consoleMessages.filter(m => m.type === level);
   }
 
   async tabs(): Promise<unknown[]> {
