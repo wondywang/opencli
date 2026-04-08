@@ -18,12 +18,24 @@ It also works as a **CLI hub** for local tools such as `gh`, `docker`, and other
 
 ## Why OpenCLI
 
-- **One mental model**: use the same CLI for websites, browser automation, Electron apps, and local tools.
-- **Reuse real sessions**: browser-backed commands run against your existing Chrome/Chromium login state instead of reimplementing auth.
-- **Deterministic outputs**: adapters return stable, scriptable structures that work well in shells, CI, and AI-agent tool use.
-- **AI-agent ready**: `browser` handles live control, `explore` discovers APIs, `synthesize` drafts adapters, and `cascade` probes auth strategies.
-- **Low runtime cost**: no model tokens are consumed when running existing commands.
-- **Extensible by default**: keep built-ins, register local CLIs, or drop `.ts` / `.yaml` adapters into `clis/`.
+---
+
+## Highlights
+
+- **CLI All Electron** — CLI-ify apps like Antigravity Ultra! Now AI can control itself natively.
+- **Browser Automation** — `browser` gives AI agents direct browser control: click, type, extract, screenshot — any interaction, fully scriptable.
+- **Website → CLI** — Turn any website into a deterministic CLI: 70+ pre-built adapters, or crystallize your own with `opencli record`.
+- **Account-safe** — Reuses Chrome/Chromium logged-in state; your credentials never leave the browser.
+- **Anti-detection built-in** — Patches `navigator.webdriver`, stubs `window.chrome`, fakes plugin lists, cleans ChromeDriver/Playwright globals, and strips CDP frames from Error stack traces. Extensive anti-fingerprinting and risk-control evasion measures baked in at every layer.
+- **AI Agent ready** — `explore` discovers APIs, `synthesize` generates adapters, `cascade` finds auth strategies, `browser` controls the browser directly.
+- **External CLI Hub** — Discover, auto-install, and passthrough commands to any external CLI (gh, obsidian, docker, etc). Zero setup.
+- **Self-healing setup** — `opencli doctor` diagnoses and auto-starts the daemon, extension, and live browser connectivity.
+- **Dynamic Loader** — Simply drop `.ts` adapters into the `clis/` folder for auto-registration.
+- **Zero LLM cost** — No tokens consumed at runtime. Run 10,000 times and pay nothing.
+- **Deterministic** — Same command, same output schema, every time. Pipeable, scriptable, CI-friendly.
+- **Broad coverage** — 79+ sites across global and Chinese platforms (Bilibili, Zhihu, Xiaohongshu, Reddit, HackerNews, and more), plus desktop Electron apps via CDP.
+
+---
 
 ## Quick Start
 
@@ -283,9 +295,9 @@ opencli plugin uninstall my-tool
 
 | Plugin | Type | Description |
 |--------|------|-------------|
-| [opencli-plugin-github-trending](https://github.com/ByteYue/opencli-plugin-github-trending) | YAML | GitHub Trending repositories |
+| [opencli-plugin-github-trending](https://github.com/ByteYue/opencli-plugin-github-trending) | TS | GitHub Trending repositories |
 | [opencli-plugin-hot-digest](https://github.com/ByteYue/opencli-plugin-hot-digest) | TS | Multi-platform trending aggregator |
-| [opencli-plugin-juejin](https://github.com/Astro-Han/opencli-plugin-juejin) | YAML | 稀土掘金 (Juejin) hot articles |
+| [opencli-plugin-juejin](https://github.com/Astro-Han/opencli-plugin-juejin) | TS | 稀土掘金 (Juejin) hot articles |
 | [opencli-plugin-vk](https://github.com/flobo3/opencli-plugin-vk) | TS | VK (VKontakte) wall, feed, and search |
 
 See [Plugins Guide](./docs/guide/plugins.md) for creating your own plugin.
@@ -298,7 +310,7 @@ See [Plugins Guide](./docs/guide/plugins.md) for creating your own plugin.
 
 ```bash
 opencli explore https://example.com --site mysite   # Discover APIs + capabilities
-opencli synthesize mysite                            # Generate YAML adapters
+opencli synthesize mysite                            # Generate TS adapters
 opencli generate https://example.com --goal "hot"   # One-shot: explore → synthesize → register
 opencli cascade https://api.example.com/data         # Auto-probe: PUBLIC → COOKIE → HEADER
 ```

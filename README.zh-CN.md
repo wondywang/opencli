@@ -23,7 +23,7 @@ OpenCLI 可以用同一套 CLI 做三类事情：
 - **输出稳定**：适配器命令返回固定结构，适合 shell、脚本、CI 和 AI Agent 工具调用。
 - **面向 AI Agent**：`browser` 负责实时操作，`explore` 负责探索接口，`synthesize` 负责生成适配器，`cascade` 负责探测认证路径。
 - **运行成本低**：已有命令运行时不消耗模型 token。
-- **天然可扩展**：既能用内置能力，也能注册本地 CLI，或直接往 `clis/` 丢 `.ts` / `.yaml` 适配器。
+- **天然可扩展**：既能用内置能力，也能注册本地 CLI，或直接往 `clis/` 丢 `.ts` 适配器。
 
 ## 快速开始
 
@@ -414,7 +414,7 @@ opencli plugin uninstall my-tool                            # 卸载
 # 1. Deep Explore — 网络拦截 → 响应分析 → 能力推理 → 框架检测
 opencli explore https://example.com --site mysite
 
-# 2. Synthesize — 从探索成果物生成 evaluate-based YAML 适配器
+# 2. Synthesize — 从探索成果物生成 evaluate-based TS 适配器
 opencli synthesize mysite
 
 # 3. Generate — 一键完成：探索 → 合成 → 注册
